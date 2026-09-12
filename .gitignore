@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+processed_image/
+data/
+out
+models/
+bin/
+backend/third_party/
+agent
+logs
+log
+.benchmarks

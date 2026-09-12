@@ -1,0 +1,94 @@
+# Don't assume the directory path as it is given by the user from the end.
+# So keep things in that way
+import os
+from pathlib import Path
+
+
+class Config:
+
+    OS = ["windows", "linux", "macos"]
+
+    INDEX_PATH = Path("data/index/faiss_hnsw.index")
+
+    NORMALIZATION_VERSION = "rag_v1"
+    CHUNK_VERSION = "chunk_v1"
+    EMBEDDING_MODEL_ID = "embedding_v1"
+    METADATA_PATH = "data/index/metadata.json"
+    EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+    CHUNK_SIZE = 256  # Reduced from 800 for more granular chunks
+    CHUNK_OVERLAP = 50  # Reduced from 100 proportionally
+
+    EMBEDDING_BATCH_SIZE = 64
+    ANN_TOP_K = 10
+    METADATA_DB_PATH = Path("data/index/chunks.db")
+
+    L1_CAPACITY = 32
+    L2_CAPACITY = 128
+    L3_CAPACITY = 1024
+    RECENCY_BOOST = 0.2
+    L2_THRESHOLD = 8
+    L3_THRESHOLD = 3
+
+    CACHE_HISTORY_DB_PATH = Path("data/index/cache_history.db")
+
+    HISTORY_MAX_AGE = 3600
+    HISTORY_MAX_SIZE = 32
+
+    RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    RERANK_TOP_K = 5
+
+    MIN_RELEVANCE_SCORE = 0.25
+    MAX_RETRIES = 2
+
+    # Measured on a 20-core CPU with llama-bench (Q4_K_M, tg128):
+    #   mistral-7b-instruct-v0.2   4.07 GiB    8.03 tok/s decode,  73 tok/s prefill
+    #   qwen2.5-3b-instruct        1.95 GiB   14.77 tok/s decode, 143 tok/s prefill
+    #   stablelm-zephyr-3b         1.59 GiB   18.74 tok/s decode, 117 tok/s prefill
+    GENERATION_MODEL = "TheBloke/Mistral-7B-Instruct-v0.2-GGUF"
+    GENERATION_MODEL_FILE = "mistral-7b-instruct-v0.2.Q4_K_M.gguf"  # ~4.1GB
+    MODELS_DIR = Path("models")
+
+    # Prompt wrapper for backends that have no chat template of their own (the
+    # C++ llm_backend). llama-cpp-python reads the template from the GGUF and
+    # ignores this. Previously the Mistral "[INST] <<SYS>>" form was hardcoded,
+    # which silently produces garbage for any non-Mistral model.
+    PROMPT_TEMPLATE = "mistral"  # "zephyr" | "mistral" | "plain"
+
+    # --- Inference tuning -------------------------------------------------
+    # One source of truth: the Python and C++ backends previously disagreed
+    # (n_ctx 2048 vs 8192) and hardcoded their own batch/thread/token limits.
+    #
+    # N_CTX costs KV cache, and that cache moves into VRAM once layers are
+    # offloaded: order of 100 MB per 1024 tokens for a 7B, less for a 3B.
+    # 4096 gives the ~1,100-token RAG prompt real headroom; 2048 did not.
+    N_CTX = 4096
+    N_BATCH = 512  # llama.cpp default; 256 made prefill do 2x the passes
+    N_THREADS = 0  # 0 -> os.cpu_count()
+    # -1 offloads every layer the backend can take, 0 forces CPU. Ignored with
+    # no effect if the installed llama.cpp has no GPU backend compiled in --
+    # check llama_cpp.llama_supports_gpu_offload() before believing this.
+    N_GPU_LAYERS = -1
+    MAX_NEW_TOKENS = 256  # a cap, not a target; generation stops at EOS
+    GEN_TEMPERATURE = 0.1
+
+    # --- Prompt / context budget -----------------------------------------
+    MAX_CONTEXT_CHUNKS = 5
+    # Kept at 1000: raising it grows the prefill, which is ~60% of query latency.
+    # The freed context from the shorter system prompt is better spent on
+    # headroom than on longer passages.
+    CHUNK_CHAR_LIMIT = 1000
+    # Tokens held back from the context budget so the prompt can never crowd
+    # out the answer or overrun n_ctx.
+    CTX_SAFETY_MARGIN = 192
+    USE_LOCAL_MODEL = True
+    OFFLINE_MODE = True
+    DEFAULT_MODEL = GENERATION_MODEL
+    API_URL = "https://api-inference.huggingface.co/models"
+    DB_PATH = "data/index/cache_history.db"
+    # C++ compiled binayr path for LLM inferenc (if using local model on linux/macos)
+    BIN_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / "bin" / "llm_backend"
+
+
+if __name__ == "__main__":
+    test_config = Config()
+    print(os.path.dirname(os.path.abspath(__file__)))

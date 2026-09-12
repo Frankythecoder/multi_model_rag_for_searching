@@ -1,28 +1,35 @@
-/**
- * PRELOAD SCRIPT
- * This script acts as a secure bridge between the Renderer process (UI) 
- * and the Main process (OS/System). It exposes specific functions to 
- * the 'window' object without giving the UI full access to Node.js.
- */
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Chat messaging
+
+  // Auth
+  login: (username, password) => ipcRenderer.invoke('auth:login', username, password),
+  register: (username, email, password) => ipcRenderer.invoke('auth:register', username, email, password),
+  navigateToChat: () => ipcRenderer.invoke('auth:navigate-chat'),
+  storeTokens: (tokens) => ipcRenderer.invoke('auth:store-tokens', tokens),
+  getAccessToken: () => ipcRenderer.invoke('auth:get-access-token'),
+
   sendMessage: (message) => ipcRenderer.invoke('chat:send', message),
+
   sendSpeechQuery: (audioBuffer, fileName) => ipcRenderer.invoke('chat:send-speech', audioBuffer, fileName),
-  
-  // Document management
+
   uploadDocuments: (type) => ipcRenderer.invoke('documents:upload', type),
+
+
+  uploadWebcam: (imageBuffer, fileName) => ipcRenderer.invoke('documents:upload-webcam', imageBuffer, fileName),
+
+
   getDocuments: () => ipcRenderer.invoke('documents:get-all'),
-  
-  /**
-   * Listen for document list refreshes triggered by the Main process.
-   * This is essential when the user uses the Native Application Menu (File -> Upload).
-   */
+
   onDocumentsRefreshed: (callback) => ipcRenderer.on('documents:refreshed', () => callback()),
-  
-  // History management
+
+
   saveHistory: (chatSession) => ipcRenderer.invoke('history:save', chatSession),
   getHistory: () => ipcRenderer.invoke('history:get-all'),
-  deleteHistory: (sessionId) => ipcRenderer.invoke('history:delete', sessionId)
+  deleteHistory: (sessionId) => ipcRenderer.invoke('history:delete', sessionId),
+
+
+
+
+  openFile: (filePath) => ipcRenderer.invoke('file:open', filePath)
 });
